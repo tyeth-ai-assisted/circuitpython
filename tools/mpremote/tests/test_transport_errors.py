@@ -22,14 +22,15 @@ class FilesystemErrorTests(unittest.TestCase):
             ("OSError: [Errno 2] Fichier absent: /caf\u00e9.py", errno.ENOENT),
         )
         for message, expected in cases:
-            with self.subTest(message=message):
-                error = TransportExecError(
-                    b"", "Traceback (most recent call last):\r\n" + message + "\r\n"
-                )
-                converted = _convert_filesystem_error(error, "/new.py")
-                self.assertIsInstance(converted, OSError)
-                self.assertEqual(converted.errno, expected)
-                self.assertEqual(converted.strerror, "/new.py")
+            for ending in ("", "\n", "\r\n", "\r\r\n", "\r\n\r\n"):
+                with self.subTest(message=message, ending=ending):
+                    error = TransportExecError(
+                        b"", "Traceback (most recent call last):\r\n" + message + ending
+                    )
+                    converted = _convert_filesystem_error(error, "/new.py")
+                    self.assertIsInstance(converted, OSError)
+                    self.assertEqual(converted.errno, expected)
+                    self.assertEqual(converted.strerror, "/new.py")
 
     def test_unknown_or_malformed_error_is_preserved(self):
         for message in (
@@ -40,6 +41,8 @@ class FilesystemErrorTests(unittest.TestCase):
             "OSError: [Errno 2",
             "ValueError: [Errno 2] No such file/directory",
             "OSError: [Errno 2] No such file/directory\nValueError: final exception",
+            "",
+            "\r\n",
         ):
             with self.subTest(message=message):
                 error = TransportExecError(b"", message)
