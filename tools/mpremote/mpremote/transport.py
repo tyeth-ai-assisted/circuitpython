@@ -123,8 +123,11 @@ def _convert_filesystem_error(e, info):
 
         # Some targets don't render OSError with the name of the errno, so in these
         # cases support an explicit mapping of errnos to known numeric codes.
-        error_lines = e.error_output.splitlines()
+        error_lines = e.error_output.rstrip().splitlines()
         match = re.match(r"OSError: (\d+)$", error_lines[-1])
+        if not match:
+            # CircuitPython uses a bracketed errno followed by descriptive text.
+            match = re.match(r"OSError: \[Errno (\d+)\](?: .*)?$", error_lines[-1])
         if match:
             value = int(match.group(1), 10)
             if value in MP_ERRNO_TABLE:
